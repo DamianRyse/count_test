@@ -1,36 +1,88 @@
 use chrono::{DateTime, Utc};
+use rayon::{prelude::*, ThreadPoolBuilder};
+use num_cpus;
+
+
 const DATE_FORMAT_STR: &'static str = "%a, %d %b %Y %H:%M:%S GMT";
 
 fn main() {
-    // counter
-    let mut counter:u64 = 0;
+    let num_threads: usize = num_cpus::get();
+    let pool = ThreadPoolBuilder::new().num_threads(num_threads).build().unwrap();
 
-    // current percentage value
-    let mut last_percentage: i8 = 0;
+    println!("Found {} CPU cores.", num_threads);
 
-    // print the current timestamp to console. This is the starting time.
     println!("Loop started at: {}", current_time());
+    let n = pool.install(|| count_to_u32());
+    // alternatives:
+    // let n = pool.install(|| count_to_u64());
+    // let n = pool.install(|| count_to_u128());
+    // let n = pool.install(|| count_to_u16());
 
-    loop {
-        // Increase value by 1. Needs to be volatile, so the compiler doesn't optimize it away
-        unsafe { core::ptr::write_volatile(&mut counter, counter + 1) };
-
-        // Display percentage
-        let percentage: f64 = 100.0 / u64::MAX as f64 * counter as f64;
-        if percentage.floor() > last_percentage as f64 {
-            last_percentage = percentage.floor() as i8;
-            println!("{}% reached",last_percentage)
-        }
-        
-        // Break out of the loop if we reached the MAX value.
-        if counter == u64::MAX {
-            break;
-        }
-    }
-
-    // print the current timestamp to console. This is the ending time.
     println!("Loop ended at: {}", current_time());
+    println!("Result: {}", n);
 }
+
+fn count_to_u128() -> usize {
+    let max_value = u128::MAX;
+    let result = (0..max_value)
+        .into_par_iter()
+        .map(|_| {
+            // Increase value by 1. Needs to be volatile, so the compiler doesn't optimize it away
+            let mut counter: u128 = 0;
+            unsafe { core::ptr::write_volatile(&mut counter, 1) };
+            counter
+        })
+        .sum::<u128>();
+
+    result.try_into().unwrap()
+}
+
+
+fn count_to_u64() -> usize {
+    let max_value = u64::MAX;
+    let result = (0..max_value)
+        .into_par_iter()
+        .map(|_| {
+            // Increase value by 1. Needs to be volatile, so the compiler doesn't optimize it away
+            let mut counter: u64 = 0;
+            unsafe { core::ptr::write_volatile(&mut counter, 1) };
+            counter
+        })
+        .sum::<u64>();
+
+    result.try_into().unwrap()
+}
+
+fn count_to_u32() -> usize {
+    let max_value = u32::MAX;
+    let result = (0..max_value)
+        .into_par_iter()
+        .map(|_| {
+            // Increase value by 1. Needs to be volatile, so the compiler doesn't optimize it away
+            let mut counter: u32 = 0;
+            unsafe { core::ptr::write_volatile(&mut counter, 1) };
+            counter
+        })
+        .sum::<u32>();
+
+    result.try_into().unwrap()
+}
+
+fn count_to_u16() -> usize {
+    let max_value = u16::MAX;
+    let result = (0..max_value)
+        .into_par_iter()
+        .map(|_| {
+            // Increase value by 1. Needs to be volatile, so the compiler doesn't optimize it away
+            let mut counter: u16 = 0;
+            unsafe { core::ptr::write_volatile(&mut counter, 1) };
+            counter
+        })
+        .sum::<u16>();
+
+    result.try_into().unwrap()
+}
+
 
 /// Uses the chrono crate to display the current date and time in RFC1123 format.
 fn current_time() -> String {
